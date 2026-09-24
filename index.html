@@ -753,7 +753,8 @@ var Engine=(function(){
   }
   function frame(now, meta){
     if(!running) return;
-    var tt = meta && meta.mediaTime!=null ? meta.mediaTime : (now/1000);
+    /* one clock for everything: page time in seconds, same base the games use */
+    var tt = (now!=null? now : performance.now())/1000;
     frames++; if(now-fpsT>500){ fps=frames*1000/(now-fpsT); frames=0; fpsT=now; }
     if(det && vid.videoWidth){
       det.estimatePoses(vid,{maxPoses:1,flipHorizontal:false}).then(function(poses){
@@ -950,14 +951,18 @@ var ReactGame=(function(){
     caught:function(e){
       human++; trials.push({box:cur,limit:limit,rt:Math.round(e*1000)});
       flash[cur]=performance.now()/1000+0.35; flashC[cur]="#43D17F";
-      beep(920,0.1,0.16); bigNum.textContent=Math.round(e*1000)+" ms"; setSt("gap"); cur=-1; this.after();
+      beep(920,0.1,0.16); bigNum.textContent=Math.round(e*1000)+" ms"; setSt("caught");
     },
     missed:function(){
       spid++; trials.push({box:cur,limit:limit,rt:null});
-      flash[cur]=performance.now()/1000+0.6; flashC[cur]="#FF6B75";
-      beep(240,0.2,0.16); bigNum.textContent="✖"; setSt("gap"); this.after();
+      flash[cur]=performance.now()/1000+1.0; flashC[cur]="#FF6B75";
+      beep(240,0.18,0.16); bigNum.textContent="✖"; setSt("steal");
     },
-    after:function(){ if(idx>=FLIES) this.finish(); },
+    endTurn:function(){
+      cur=-1;
+      if(idx>=FLIES) this.finish();
+      else { setSt("wait"); nextAt=performance.now()/1000+0.5; }
+    },
     finish:function(){
       setSt("end"); setBtns(t("again"), t("finish"));
       var s=saveSession({type:"react", trials:trials.slice()});
@@ -984,21 +989,35 @@ var ReactGame=(function(){
         if(e<3){ lab(t("stand_center"),W/2,H*0.42,base*0.05,"#fff"); lab(String(3-Math.floor(e)),W/2,H*0.52,base*0.14,"#FFD35C"); }
         else { beep(1000,0.3,0.24); setSt("wait"); nextAt=now+0.6; }
       } else if(st==="wait"){ if(now>=nextAt) spawn(); }
-      else if(st==="gap"){ if(e>0.45){ if(idx>=FLIES) this.finish(); else { setSt("wait"); nextAt=now+0.5; } } }
       if(st==="fly"&&cur>=0){
         var rr=rct(cur), k=Math.min(1,(now-flyT0)/0.15);
         fitImg(IMG.fly, rr.cx+Math.sin(now*9)*rr.w*0.06, rr.cy+Math.cos(now*7)*rr.h*0.05, rr.w*0.5, rr.h*0.5, Math.sin(now*12)*0.2, k);
         lab(String(Math.max(1,Math.ceil(limit-(now-flyT0)))), rr.cx, rr.y-base*0.03, base*0.06,"#FFD35C");
       }
-      if(st==="miss"&&cur>=0){ var r2=rct(cur); fitImg(IMG.spider,r2.cx,r2.cy,r2.w*0.9,r2.h*0.9,0,1); }
+      if(st==="caught"&&cur>=0){
+        var rc=rct(cur), kc=Math.min(1,e/0.4);
+        fitImg(IMG.fly, rc.cx, rc.cy-kc*rc.h*0.6, rc.w*0.5, rc.h*0.5, kc*8, 1-kc);
+        lab("+1", rc.cx, rc.cy-base*0.05-kc*base*0.04, base*0.05, "#63E39B");
+        if(kc>=1) this.endTurn();
+      }
+      if(st==="steal"&&cur>=0){
+        var rs=rct(cur), DOWN=0.5, UP=0.6, sy, fy;
+        if(e<DOWN){ var kd=1-(1-e/DOWN)*(1-e/DOWN); sy=-H*0.12+(rs.cy+H*0.12)*kd; fy=rs.cy; }
+        else { var ku=Math.min(1,(e-DOWN)/UP); ku=ku*ku; sy=rs.cy+(-H*0.18-rs.cy)*ku; fy=sy+rs.h*0.32; }
+        ctx.save(); ctx.strokeStyle="rgba(255,255,255,.85)"; ctx.lineWidth=2.5*dpr;
+        ctx.beginPath(); ctx.moveTo(rs.cx,0); ctx.lineTo(rs.cx,sy); ctx.stroke(); ctx.restore();
+        fitImg(IMG.fly, rs.cx+(e<DOWN? Math.sin(now*26)*rs.w*0.08:0), fy, rs.w*0.44, rs.h*0.44, 0, 1);
+        fitImg(IMG.spider, rs.cx, sy, rs.w*0.95, rs.h*0.95, Math.sin(now*9)*0.08, 1);
+        if(e>=DOWN+UP) this.endTurn();
+      }
       /* hand markers */
       hands.forEach(function(h){
         var x=(1-h.x)*W, y=h.y*H;
         ctx.fillStyle="rgba(99,227,155,.28)"; ctx.beginPath(); ctx.arc(x,y,base*0.045,0,7); ctx.fill();
         ctx.fillStyle="#63E39B"; ctx.beginPath(); ctx.arc(x,y,base*0.018,0,7); ctx.fill();
       });
-      lab("▶ "+human+" : "+spid+" \u{1F577}️", W/2, base*0.05, base*0.045,"#fff");
-      lab(idx+" / "+FLIES, W/2, base*0.10, base*0.03,"#D8CCEE");
+      lab("▶ "+human+" : "+spid+" \u{1F577}️", W/2, H*0.16, base*0.045,"#fff");
+      lab(idx+" / "+FLIES, W/2, H*0.20, base*0.03,"#D8CCEE");
     }
   };
   function spawn(){
