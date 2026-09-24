@@ -1,3 +1,5 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spider Reaction Lab</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap">
 <style>
@@ -138,6 +140,13 @@ figcaption{font-size:13px;color:var(--muted);margin-top:6px}
     <div class="grid" style="margin-top:16px">
       <div class="card">
         <div class="row" style="justify-content:space-between">
+          <h2 style="font-size:19px" data-t="groups"></h2>
+          <button class="btn sm" id="addGroup" data-t="new_group"></button>
+        </div>
+        <div class="list" id="groupList" style="margin-top:14px"></div>
+      </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between">
           <h2 style="font-size:19px" data-t="athletes"></h2>
           <button class="btn sm" id="addPlayer2" data-t="add_athlete"></button>
         </div>
@@ -156,6 +165,8 @@ figcaption{font-size:13px;color:var(--muted);margin-top:6px}
 
   <!-- REPORT -->
   <main class="page hide" id="report"></main>
+  <main class="page hide" id="groupView"></main>
+  <main class="page hide" id="groupReport"></main>
 </div>
 
 <!-- GAME -->
@@ -205,12 +216,17 @@ var T = {
   report:"Hisobot",print:"Chop etish / PDF",open:"Ochish",delete:"O'chirish",date:"Sana",score:"Hisob",
   trial:"Urinish",rt:"Reaksiya (ms)",tier:"Bosqich",group_avg:"Yosh guruhi o'rtachasi",athlete_line:"Sportchi",
   chart_trend:"Har bir urinish bo'yicha reaksiya vaqti",chart_side:"Tomonlar bo'yicha o'rtacha",
-  no_players:"Hali sportchi yo'q.",no_sessions:"Hali sessiya yo'q.",name_q:"Ism:",age_q:"Yosh (8–12):",
+  no_players:"Hali sportchi yo'q.",no_sessions:"Hali sessiya yo'q.",name_q:"Ism:",age_q:"Yosh (8–12):",age:"Yosh",
   sessions_n:"sessiya",ms:"ms",faster:"tezroq",slower:"sekinroq",first:"Birinchi",last:"Oxirgi",
   device_note:"Eslatma: kamera qo'shimcha 50–150 ms kechikish beradi. Raqamlar bir xil qurilmada taqqoslash uchun to'g'ri.",
   table_view:"Jadval ko'rinishi",vs_group:"Yosh guruhiga nisbatan",no_data:"Ma'lumot yo'q",
   cam_msg:"Kameraga ruxsat bering va qayta urinib ko'ring.",pick_athlete:"Avval sportchini tanlang.",
-  last_session:"Oxirgi sessiya",confirm_wipe:"Hamma ma'lumot o'chiriladi. Davom etasizmi?",how_text:"Bola markazda turadi. Atrofida 7 ta o'rgimchak to'ri. Pashsha to'rga qo'nadi — qo'lni o'sha to'r ustidan tez o'tkazish kerak. 30 ta pashsha: 3, keyin 2, keyin 1 soniya."},
+  last_session:"Oxirgi sessiya",confirm_wipe:"Hamma ma'lumot o'chiriladi. Davom etasizmi?",how_text:"Bola markazda turadi. Atrofida 7 ta o'rgimchak to'ri. Pashsha to'rga qo'nadi — qo'lni o'sha to'r ustidan tez o'tkazish kerak. 30 ta pashsha: 3, keyin 2, keyin 1 soniya.",groups:"Guruhlar",new_group:"Yangi guruh",group_name_q:"Guruh nomi:",members:"A'zolar",
+  test_now:"Test",not_tested:"Test qilinmagan",tested:"Test qilingan",group_report:"Guruh natijalari",
+  rank:"O'rin",score:"Ball",download_group:"Guruh CSV",download_one:"Shu sessiya CSV",no_groups:"Hali guruh yo'q.",
+  add_member:"A'zo qo'shish",open_group:"Ochish",group:"Guruh",podium:"G'oliblar",remove:"Chiqarish",
+  quality_warn:"Diqqat: o'rtacha reaksiya 300 ms dan kichik. Kamera fon harakatini sezgan bo'lishi mumkin — orqa fonni tinch qiling va qayta o'tkazing.",
+  select_member:"Kimni test qilamiz?",all_tested:"Hammasi test qilindi",group_of:"guruh"},
  ru:{app:"Spider Reaction Lab",nav_home:"Игра",nav_coach:"Панель тренера",
   home_title:"Игра на реакцию и анализ",home_sub:"Ребёнок играет — программа записывает время реакции на каждую муху.",
   athlete:"Спортсмен",add_athlete:"Добавить спортсмена",play:"ИГРАТЬ",how:"Как играть",
@@ -225,12 +241,17 @@ var T = {
   report:"Отчёт",print:"Печать / PDF",open:"Открыть",delete:"Удалить",date:"Дата",score:"Счёт",
   trial:"Попытка",rt:"Реакция (мс)",tier:"Этап",group_avg:"Среднее по возрасту",athlete_line:"Спортсмен",
   chart_trend:"Время реакции по попыткам",chart_side:"Среднее по сторонам",
-  no_players:"Спортсменов пока нет.",no_sessions:"Сессий пока нет.",name_q:"Имя:",age_q:"Возраст (8–12):",
+  no_players:"Спортсменов пока нет.",no_sessions:"Сессий пока нет.",name_q:"Имя:",age_q:"Возраст (8–12):",age:"Возраст",
   sessions_n:"сессий",ms:"мс",faster:"быстрее",slower:"медленнее",first:"Начало",last:"Конец",
   device_note:"Важно: камера добавляет 50–150 мс задержки. Числа корректны для сравнения на одном устройстве.",
   table_view:"Таблица",vs_group:"Сравнение с возрастной группой",no_data:"Нет данных",
   cam_msg:"Разрешите доступ к камере и повторите.",pick_athlete:"Сначала выберите спортсмена.",
-  last_session:"Последняя сессия",confirm_wipe:"Все данные будут удалены. Продолжить?",how_text:"Ребёнок стоит в центре. Вокруг 7 паутин. Муха садится на паутину — нужно быстро провести рукой над ней. 30 мух: 3, затем 2, затем 1 секунда."},
+  last_session:"Последняя сессия",confirm_wipe:"Все данные будут удалены. Продолжить?",how_text:"Ребёнок стоит в центре. Вокруг 7 паутин. Муха садится на паутину — нужно быстро провести рукой над ней. 30 мух: 3, затем 2, затем 1 секунда.",groups:"Группы",new_group:"Новая группа",group_name_q:"Название группы:",members:"Участники",
+  test_now:"Тест",not_tested:"Не тестирован",tested:"Протестирован",group_report:"Результаты группы",
+  rank:"Место",score:"Балл",download_group:"CSV группы",download_one:"CSV этой сессии",no_groups:"Групп пока нет.",
+  add_member:"Добавить участника",open_group:"Открыть",group:"Группа",podium:"Победители",remove:"Убрать",
+  quality_warn:"Внимание: среднее время меньше 300 мс. Возможно, камера считала движение фона — уберите движение сзади и повторите.",
+  select_member:"Кого тестируем?",all_tested:"Все протестированы",group_of:"группа"},
  en:{app:"Spider Reaction Lab",nav_home:"Game",nav_coach:"Coach panel",
   home_title:"Reaction game and analysis",home_sub:"The child plays — the app records a reaction time for every fly.",
   athlete:"Athlete",add_athlete:"Add athlete",play:"PLAY",how:"How to play",
@@ -245,12 +266,17 @@ var T = {
   report:"Report",print:"Print / PDF",open:"Open",delete:"Delete",date:"Date",score:"Score",
   trial:"Trial",rt:"Reaction (ms)",tier:"Stage",group_avg:"Age-group average",athlete_line:"Athlete",
   chart_trend:"Reaction time by trial",chart_side:"Average by side",
-  no_players:"No athletes yet.",no_sessions:"No sessions yet.",name_q:"Name:",age_q:"Age (8–12):",
+  no_players:"No athletes yet.",no_sessions:"No sessions yet.",name_q:"Name:",age_q:"Age (8–12):",age:"Age",
   sessions_n:"sessions",ms:"ms",faster:"faster",slower:"slower",first:"First",last:"Last",
   device_note:"Note: the camera adds 50–150 ms of its own delay. The numbers are valid for comparing on the same device.",
   table_view:"Table view",vs_group:"Compared with the age group",no_data:"No data",
   cam_msg:"Allow camera access and try again.",pick_athlete:"Choose an athlete first.",
-  last_session:"Last session",confirm_wipe:"All data will be deleted. Continue?",how_text:"The child stands in the middle with 7 webs around them. A fly lands on a web and they sweep a hand over it. 30 flies: 3 seconds, then 2, then 1."}
+  last_session:"Last session",confirm_wipe:"All data will be deleted. Continue?",how_text:"The child stands in the middle with 7 webs around them. A fly lands on a web and they sweep a hand over it. 30 flies: 3 seconds, then 2, then 1.",groups:"Groups",new_group:"New group",group_name_q:"Group name:",members:"Members",
+  test_now:"Test",not_tested:"Not tested",tested:"Tested",group_report:"Group results",
+  rank:"Place",score:"Score",download_group:"Group CSV",download_one:"This session CSV",no_groups:"No groups yet.",
+  add_member:"Add member",open_group:"Open",group:"Group",podium:"Podium",remove:"Remove",
+  quality_warn:"Warning: the mean reaction is under 300 ms. The camera may have picked up background movement — calm the background and test again.",
+  select_member:"Who is next?",all_tested:"Everyone has been tested",group_of:"group"}
 };
 var lang = "uz";
 function t(k){ return (T[lang] && T[lang][k]) || T.en[k] || k; }
@@ -268,7 +294,7 @@ var KEY="spiderLab.v1";
 var db = {athletes:[], sessions:[]};
 function load(){
   try{ var raw = localStorage.getItem(KEY); if(raw) db = JSON.parse(raw); }catch(e){}
-  if(!db.athletes) db.athletes=[]; if(!db.sessions) db.sessions=[];
+  if(!db.athletes) db.athletes=[]; if(!db.sessions) db.sessions=[]; if(!db.groups) db.groups=[];
 }
 function save(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} }
 load();
@@ -375,14 +401,17 @@ document.addEventListener("mousemove", function(ev){
 
 /* ============ views ============ */
 var elHome=document.getElementById("home"), elCoach=document.getElementById("coach"),
-    elReport=document.getElementById("report"), elGame=document.getElementById("gameScreen");
-var view="home", reportId=null;
+    elReport=document.getElementById("report"), elGame=document.getElementById("gameScreen"),
+    elGroup=document.getElementById("groupView"), elGReport=document.getElementById("groupReport");
+var view="home", reportId=null, activeGroup=null;
 
 function go(v, id){
   view=v; reportId=id||null;
   elHome.classList.toggle("hide", v!=="home");
   elCoach.classList.toggle("hide", v!=="coach");
   elReport.classList.toggle("hide", v!=="report");
+  elGroup.classList.toggle("hide", v!=="group");
+  elGReport.classList.toggle("hide", v!=="greport");
   window.scrollTo(0,0);
   renderAll();
 }
@@ -390,6 +419,8 @@ function renderAll(){
   renderPlayers(); renderLast();
   if(view==="coach") renderCoach();
   if(view==="report") renderReport(reportId);
+  if(view==="group") renderGroup(reportId);
+  if(view==="greport") renderGroupReport(reportId);
 }
 function currentPlayerId(){ return document.getElementById("playerSel").value || null; }
 
@@ -427,6 +458,17 @@ function tiles(s, gavg){
 }
 
 function renderCoach(){
+  var gl=document.getElementById("groupList");
+  gl.innerHTML = db.groups.length ? "" : '<div class="empty">'+t("no_groups")+'</div>';
+  db.groups.forEach(function(g){
+    var R=groupRows(g);
+    var d=document.createElement("div"); d.className="item";
+    d.innerHTML='<div class="grow"><b>'+g.name+'</b><div class="small muted">'+R.rows.length+' '+t("members")+
+      ' \u00b7 '+R.done.length+' '+t("tested")+'</div></div>'+
+      '<button class="btn sec sm" data-group="'+g.id+'">'+t("open_group")+'</button>'+
+      '<button class="btn danger sm" data-delgroup="'+g.id+'">'+t("delete")+'</button>';
+    gl.appendChild(d);
+  });
   var pl=document.getElementById("playerList");
   pl.innerHTML = db.athletes.length ? "" : '<div class="empty">'+t("no_players")+'</div>';
   db.athletes.forEach(function(p){
@@ -451,6 +493,134 @@ function renderCoach(){
   });
 }
 
+
+/* ============ groups ============ */
+function lastSession(aid){
+  var ss = db.sessions.filter(function(s){return s.athleteId===aid;});
+  return ss.length ? ss[ss.length-1] : null;
+}
+function groupRows(g){
+  var rows = g.members.map(function(aid){
+    var a = db.athletes.filter(function(p){return p.id===aid;})[0];
+    if(!a) return null;
+    var s = lastSession(aid);
+    return {a:a, s:s, su: s? summarize(s.trials) : null};
+  }).filter(Boolean);
+  var done = rows.filter(function(r){ return r.su && r.su.mean!=null; });
+  done.sort(function(x,y){ return x.su.mean - y.su.mean || x.su.best - y.su.best; });
+  var top = done.length ? done[0].su.mean : null;
+  done.forEach(function(r,i){ r.rank=i+1; r.score = top ? Math.round(200*top/r.su.mean)/10 : null; });
+  return {rows:rows, done:done};
+}
+function renderGroup(gid){
+  var g = db.groups.filter(function(x){return x.id===gid;})[0];
+  if(!g){ go("coach"); return; }
+  activeGroup = g.id;
+  var R = groupRows(g);
+  var list = R.rows.map(function(r){
+    var st = r.su && r.su.mean!=null
+      ? '<span class="pill">'+fmt(r.su.mean)+' '+t("ms")+'</span><span class="pill">'+dateStr(r.s.date).split(" ")[0]+'</span>'
+      : '<span class="pill" style="color:var(--bad)">'+t("not_tested")+'</span>';
+    return '<div class="item"><div class="grow"><b>'+r.a.name+'</b><div class="small muted">'+r.a.age+'</div></div>'+st+
+      '<button class="btn sm" data-test="'+r.a.id+'">'+t("test_now")+'</button>'+
+      (r.s? '<button class="btn sec sm" data-open="'+r.s.id+'">'+t("open")+'</button>' : '')+
+      '<button class="btn danger sm" data-unmember="'+r.a.id+'">'+t("remove")+'</button></div>';
+  }).join("");
+  elGroup.innerHTML =
+    '<div class="row noprint" style="justify-content:space-between;margin-bottom:12px">'+
+      '<button class="btn sec sm" id="gBack">\u2190 '+t("coach_title")+'</button>'+
+      '<button class="btn sm" id="gReport">'+t("group_report")+'</button></div>'+
+    '<div class="card"><h1 style="font-size:24px">'+g.name+'</h1>'+
+      '<p class="muted small" style="margin:4px 0 0">'+R.rows.length+' '+t("members")+' \u00b7 '+R.done.length+' '+t("tested")+'</p>'+
+      '<div class="row" style="margin-top:14px"><button class="btn sec sm" id="gAdd">'+t("add_member")+'</button></div>'+
+      '<div class="list" style="margin-top:14px">'+(list||'<div class="empty">'+t("no_players")+'</div>')+'</div></div>';
+  document.getElementById("gBack").onclick=function(){ go("coach"); };
+  document.getElementById("gReport").onclick=function(){ go("greport", g.id); };
+  document.getElementById("gAdd").onclick=function(){ addMember(g); };
+}
+function addMember(g){
+  var free = db.athletes.filter(function(p){ return g.members.indexOf(p.id)<0; });
+  var msg = free.map(function(p,i){ return (i+1)+") "+p.name+" ("+p.age+")"; }).join("\n");
+  var pick = prompt(t("add_member")+"\n"+msg+"\n\n0) + "+t("add_athlete"), "0");
+  if(pick===null) return;
+  var n = parseInt(pick,10);
+  if(n===0){
+    var name=prompt(t("name_q")); if(!name) return;
+    var age=parseInt(prompt(t("age_q")),10)||10;
+    var p={id:"a"+Date.now(), name:name.trim(), age:age};
+    db.athletes.push(p); g.members.push(p.id);
+  } else if(free[n-1]){ g.members.push(free[n-1].id); }
+  save(); renderGroup(g.id);
+}
+function groupBar(done){
+  if(!done.length) return "";
+  var W=560, rowH=34, H=rowH*done.length+16, P={l:110,r:70,t:8};
+  var max = Math.max.apply(null, done.map(function(r){return r.su.mean;}))*1.12;
+  var out="";
+  done.forEach(function(r,i){
+    var w=(W-P.l-P.r)*(r.su.mean/max), y=P.t+i*rowH;
+    var medal = r.rank===1?"\u{1F947} ":(r.rank===2?"\u{1F948} ":(r.rank===3?"\u{1F949} ":""));
+    out += '<text x="'+(P.l-10)+'" y="'+(y+21)+'" text-anchor="end" font-size="13" fill="var(--ink-2)">'+medal+r.a.name+'</text>'+
+      '<rect x="'+P.l+'" y="'+(y+7)+'" width="'+w.toFixed(1)+'" height="20" rx="4" fill="var(--s1)" '+
+      'data-lbl="'+r.a.name+' \u2014 '+fmt(r.su.mean)+' '+t("ms")+'"/>'+
+      '<text x="'+(P.l+w+8)+'" y="'+(y+22)+'" font-size="13" font-weight="700" fill="var(--ink)">'+fmt(r.su.mean)+'</text>';
+  });
+  return '<svg viewBox="0 0 '+W+' '+H+'" width="100%" height="'+H+'" role="img" style="min-width:440px">'+out+'</svg>';
+}
+function renderGroupReport(gid){
+  var g = db.groups.filter(function(x){return x.id===gid;})[0];
+  if(!g){ go("coach"); return; }
+  var R = groupRows(g), done=R.done;
+  var medals = ["\u{1F947}","\u{1F948}","\u{1F949}"];
+  var podium = done.slice(0,3).map(function(r,i){
+    return '<div class="tile" style="text-align:center"><div style="font-size:30px">'+medals[i]+'</div>'+
+      '<div style="font-weight:800;font-size:18px">'+r.a.name+'</div>'+
+      '<div class="muted small">'+fmt(r.su.mean)+' '+t("ms")+' \u00b7 '+t("score")+' '+r.score+'</div></div>';
+  }).join("");
+  var rows = done.map(function(r){
+    return '<tr><td>'+r.rank+'</td><td>'+r.a.name+'</td><td class="num">'+r.a.age+'</td>'+
+      '<td class="num">'+fmt(r.su.mean)+'</td><td class="num">'+fmt(r.su.best)+'</td>'+
+      '<td class="num">'+fmt(r.su.sd)+'</td><td class="num">'+r.su.caught+'/'+r.su.n+'</td>'+
+      '<td class="num"><b>'+r.score+'</b></td>'+
+      '<td class="noprint"><button class="btn sec sm" data-open="'+r.s.id+'">'+t("open")+'</button></td></tr>';
+  }).join("");
+  var missing = R.rows.filter(function(r){ return !(r.su && r.su.mean!=null); })
+    .map(function(r){ return r.a.name; }).join(", ");
+  elGReport.innerHTML =
+    '<div class="row noprint" style="justify-content:space-between;margin-bottom:12px">'+
+      '<button class="btn sec sm" id="grBack">\u2190 '+g.name+'</button>'+
+      '<span class="row"><button class="btn sec sm" id="grCsv">'+t("download_group")+'</button>'+
+      '<button class="btn sm" id="grPrint">'+t("print")+'</button></span></div>'+
+    '<div class="grid">'+
+      '<div class="card"><h1 style="font-size:24px">'+g.name+'</h1>'+
+        '<p class="muted small" style="margin:4px 0 14px">'+done.length+' / '+R.rows.length+' '+t("tested")+' \u00b7 '+
+        new Date().toLocaleDateString()+'</p>'+
+        (podium? '<div class="tiles">'+podium+'</div>' : '<div class="empty">'+t("no_sessions")+'</div>')+'</div>'+
+      (done.length? '<div class="card"><h2 style="font-size:18px">'+t("mean")+' ('+t("ms")+')</h2>'+
+        '<figure class="chart-wrap">'+groupBar(done)+'</figure></div>'+
+      '<div class="card"><h2 style="font-size:18px">'+t("group_report")+'</h2>'+
+        '<div style="overflow-x:auto"><table><thead><tr><th>'+t("rank")+'</th><th>'+t("athlete")+'</th>'+
+        '<th class="num">'+t("age")+'</th><th class="num">'+t("mean")+'</th><th class="num">'+t("best")+'</th>'+
+        '<th class="num">'+t("sd")+'</th><th class="num">'+t("caught")+'</th><th class="num">'+t("score")+'</th>'+
+        '<th class="noprint"></th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+        (missing? '<p class="small muted" style="margin-top:10px">'+t("not_tested")+': '+missing+'</p>' : '')+'</div>' : '')+
+      '<div class="note">'+t("device_note")+'</div>'+
+    '</div>';
+  document.getElementById("grBack").onclick=function(){ go("group", g.id); };
+  document.getElementById("grPrint").onclick=function(){ window.print(); };
+  document.getElementById("grCsv").onclick=function(){ groupCsv(g, done); };
+}
+function groupCsv(g, done){
+  var rows=[["group","rank","athlete","age","date","mean_ms","best_ms","median_ms","sd_ms","caught","missed","left_ms","right_ms","top_ms","score_20"]];
+  done.forEach(function(r){
+    rows.push([g.name,r.rank,r.a.name,r.a.age,r.s.date,fmt(r.su.mean),fmt(r.su.best),fmt(r.su.median),
+               fmt(r.su.sd),r.su.caught,r.su.missed,fmt(r.su.left),fmt(r.su.right),fmt(r.su.top),r.score]);
+  });
+  var a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([rows.map(function(x){return x.join(",");}).join("\n")],{type:"text/csv"}));
+  a.download = g.name.replace(/[^\w-]+/g,"_")+"-group.csv"; a.click();
+}
+
 function renderReport(id){
   var s = db.sessions.filter(function(x){return x.id===id;})[0];
   if(!s){ go("coach"); return; }
@@ -469,7 +639,8 @@ function renderReport(id){
   elReport.innerHTML =
    '<div class="row noprint" style="justify-content:space-between;margin-bottom:12px">'+
      '<button class="btn sec sm" id="backCoach">← '+t("coach_title")+'</button>'+
-     '<button class="btn sm" id="printBtn">'+t("print")+'</button></div>'+
+     '<span class="row"><button class="btn sec sm" id="csvOne">'+t("download_one")+'</button>'+
+     '<button class="btn sm" id="printBtn">'+t("print")+'</button></span></div>'+
    '<div class="grid">'+
      '<div class="card"><h1 style="font-size:24px">'+a.name+' · '+a.age+'</h1>'+
        '<p class="muted small" style="margin:4px 0 14px">'+dateStr(s.date)+' · '+(s.device||"")+'</p>'+
@@ -493,10 +664,18 @@ function renderReport(id){
      '<div class="card"><h2 style="font-size:18px">'+t("table_view")+'</h2>'+
        '<table><thead><tr><th>'+t("trial")+'</th><th>'+t("side")+'</th><th>'+t("tier")+'</th><th class="num">'+t("rt")+'</th></tr></thead>'+
        '<tbody>'+trialRows+'</tbody></table></div>'+
+     (su.mean!=null && su.mean<300 ? '<div class="note" style="color:var(--bad)">'+t("quality_warn")+'</div>' : '')+
      '<div class="note">'+t("device_note")+'</div>'+
    '</div>';
   document.getElementById("backCoach").onclick=function(){ go("coach"); };
   document.getElementById("printBtn").onclick=function(){ window.print(); };
+  document.getElementById("csvOne").onclick=function(){
+    var rows=[["athlete","age","date","trial","side","limit_s","rt_ms"]];
+    s.trials.forEach(function(x,i){ rows.push([a.name,a.age,s.date,i+1,sideOf(x.box),x.limit,x.rt==null?"":x.rt]); });
+    var el=document.createElement("a");
+    el.href=URL.createObjectURL(new Blob([rows.map(function(r){return r.join(",");}).join("\n")],{type:"text/csv"}));
+    el.download=a.name.replace(/[^\w-]+/g,"_")+"-"+s.date.slice(0,10)+".csv"; el.click();
+  };
 }
 
 /* ============ events ============ */
@@ -507,7 +686,28 @@ document.getElementById("langSeg").addEventListener("click", function(e){
 });
 document.getElementById("navHome").onclick=function(){ go("home"); };
 document.getElementById("navCoach").onclick=function(){ go("coach"); };
+document.getElementById("addGroup").onclick=function(){
+  var n=prompt(t("group_name_q")); if(!n) return;
+  db.groups.push({id:"g"+Date.now(), name:n.trim(), created:new Date().toISOString(), members:[]});
+  save(); renderAll();
+};
 document.addEventListener("click", function(e){
+  var gOpen=e.target.closest("[data-group]"); if(gOpen){ go("group", gOpen.getAttribute("data-group")); return; }
+  var gDel=e.target.closest("[data-delgroup]");
+  if(gDel){ db.groups=db.groups.filter(function(x){return x.id!==gDel.getAttribute("data-delgroup");}); save(); renderAll(); return; }
+  var un=e.target.closest("[data-unmember]");
+  if(un){
+    var g=db.groups.filter(function(x){return x.id===activeGroup;})[0];
+    if(g){ g.members=g.members.filter(function(id){return id!==un.getAttribute("data-unmember");}); save(); renderGroup(g.id); }
+    return;
+  }
+  var tst=e.target.closest("[data-test]");
+  if(tst){
+    var sel=document.getElementById("playerSel"); sel.value=tst.getAttribute("data-test");
+    if(sel.value!==tst.getAttribute("data-test")){ renderPlayers(); sel.value=tst.getAttribute("data-test"); }
+    openGame();
+    return;
+  }
   var o=e.target.closest("[data-open]"); if(o){ go("report", o.getAttribute("data-open")); return; }
   var d=e.target.closest("[data-del]");
   if(d){
@@ -552,7 +752,7 @@ Object.keys(IMG).forEach(function(k){ var im=new Image(); im.onload=im.onerror=f
 
 var cv=document.getElementById("cv"), ctx=cv.getContext("2d"), vid=document.getElementById("vid");
 var ovStart=document.getElementById("ovStart"), ovEnd=document.getElementById("ovEnd"), ovErr=document.getElementById("ovErr");
-var FLIES=30, PAUSE=0.8;
+var FLIES=30, PAUSE=0.8, MIN_RT=0.25;
 var LAYOUT=[[0.015,0.045,0.30,0.22],[0.35,0.045,0.30,0.22],[0.685,0.045,0.30,0.22],
             [0.015,0.32,0.21,0.24],[0.015,0.60,0.21,0.24],[0.775,0.32,0.21,0.24],[0.775,0.60,0.21,0.24]];
 var gs="idle", t0=0, nextAt=0, idx=0, human=0, spid=0, cur=-1, lastB=-1, limit=3, trials=[], playerId=null;
@@ -560,7 +760,7 @@ var flash=[], flashCol=[], W=0,H=0,dpr=1, stream=null, loopOn=false;
 
 var MW=160,MH=120, mcv=document.createElement("canvas"), mctx;
 mcv.width=MW; mcv.height=MH; mctx=mcv.getContext("2d",{willReadFrequently:true});
-var prev=null, motion=new Float32Array(7), noise=0, nSamp=0;
+var prev=null, motion=new Float32Array(7), noiseB=new Float32Array(7), base=new Float32Array(7), nSamp=0, hits=0, early=0;
 
 function sampleMotion(){
   if(!vid.videoWidth) return;
@@ -577,8 +777,15 @@ function sampleMotion(){
   }
   prev=cur8;
 }
-function calib(){ var m=0,i; for(i=0;i<7;i++) m=Math.max(m,motion[i]); noise=(noise*nSamp+m)/(nSamp+1); nSamp++; }
-function hit(b){ return motion[b] > Math.max(7, noise*2.5+4); }
+function calib(){
+  for(var i=0;i<7;i++){ noiseB[i]=(noiseB[i]*nSamp+motion[i])/(nSamp+1); base[i]=noiseB[i]; }
+  nSamp++;
+}
+function thresholdFor(b){ return Math.max(10, Math.max(noiseB[b], base[b])*3 + 5); }
+function hit(b){
+  if(motion[b] > thresholdFor(b)){ hits++; return hits>=2; }
+  hits=0; base[b] = base[b]*0.88 + motion[b]*0.12; return false;
+}
 function rct(i){ var L=LAYOUT[i];
   return {x:L[0]*W,y:L[1]*H,w:L[2]*W,h:L[3]*H,cx:(L[0]+L[2]/2)*W,cy:(L[1]+L[3]/2)*H}; }
 function setG(s){ gs=s; t0=performance.now()/1000; }
@@ -628,13 +835,14 @@ function nextFly(){ nextAt=performance.now()/1000+PAUSE; setG("wait"); }
 function spawn(){
   var i; do{ i=(Math.random()*7)|0; }while(i===lastB);
   cur=i; lastB=i; limit = idx<10?3:(idx<20?2:1); idx++;
+  hits=0; base[i]=noiseB[i];
   setG("fly");
 }
 function finishTurn(){ cur=-1; if(idx>=FLIES) finishRun(); else nextFly(); }
 function finishRun(){
   setG("done");
   var su = summarize(trials);
-  var sess = {id:"s"+Date.now(), athleteId:playerId, date:new Date().toISOString(),
+  var sess = {id:"s"+Date.now(), athleteId:playerId, date:new Date().toISOString(), groupId:activeGroup||null,
               device:(navigator.userAgent.indexOf("Mobi")>-1?"phone":"laptop"), trials:trials.slice()};
   db.sessions.push(sess); save();
   var tt=document.getElementById("endTitle");
@@ -690,7 +898,7 @@ function frame(){
       r=rct(cur); k=Math.min(1,e/0.15);
       fit(art.fly, r.cx+Math.sin(now*9)*r.w*0.06, r.cy+Math.cos(now*7)*r.h*0.05, r.w*0.55, r.h*0.55, Math.sin(now*12)*0.2, k);
       lab(String(Math.max(1,Math.ceil(limit-e))), r.cx, r.y-base*0.035, base*0.07, "#FFD35C");
-      if(e>0.12 && hit(cur)){
+      if(e>MIN_RT && hit(cur)){
         human++; flash[cur]=now+0.4; flashCol[cur]="#43D17F";
         trials.push({box:cur, limit:limit, rt:Math.round(e*1000)});
         setG("caught");
@@ -730,7 +938,7 @@ function frame(){
 document.getElementById("playBtn").onclick = openGame;
 document.getElementById("goBtn").onclick = beginRun;
 document.getElementById("againBtn").onclick = beginRun;
-document.getElementById("doneBtn").onclick = function(){ closeGame(); go("coach"); };
+document.getElementById("doneBtn").onclick = function(){ closeGame(); go(activeGroup? "group":"coach", activeGroup); };
 document.getElementById("quit").onclick = closeGame;
 document.getElementById("retryBtn").onclick = function(){ ovErr.classList.add("hide"); ovStart.classList.remove("hide"); startCam(); };
 document.getElementById("backBtn").onclick = closeGame;
