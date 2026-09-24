@@ -74,6 +74,7 @@ ol.steps{padding-left:20px;margin:8px 0 0} ol.steps li{margin:6px 0}
 
 #run{position:fixed;inset:0;z-index:40;background:#0B0813;color:#F4ECFF}
 #vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#vid.mirror{transform:scaleX(-1)}
 #cv{position:absolute;inset:0;width:100%;height:100%}
 .hud{position:absolute;left:0;right:0;top:0;z-index:3;padding:calc(10px + env(safe-area-inset-top,0px)) 12px 0;
   display:flex;gap:7px;flex-wrap:wrap;align-items:flex-start}
@@ -730,7 +731,7 @@ var Engine=(function(){
   var det=null, state=0, stream=null, running=false, cb=null;
   var mcv=document.createElement("canvas"), mx=mcv.getContext("2d",{willReadFrequently:true});
   mcv.width=160; mcv.height=120; var prev=null;
-  var fps=0, lastT=0, frames=0, fpsT=0;
+  var fps=0, lastT=0, frames=0, fpsT=0, infMs=0, skip=0;
   var KP={nose:0,lw:9,rw:10,lh:11,rh:12,la:15,ra:16};
 
   function load(){
@@ -745,17 +746,18 @@ var Engine=(function(){
   }
   function camera(facing){
     return navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:facing},
-      width:{ideal:1280},height:{ideal:720},frameRate:{ideal:60}},audio:false})
+      width:{ideal:960},height:{ideal:540},frameRate:{ideal:60}},audio:false})
       .then(function(s){ stream=s; vid.srcObject=s; return vid.play(); });
   }
   function stop(){
     running=false;
     if(stream){ stream.getTracks().forEach(function(x){x.stop();}); stream=null; vid.srcObject=null; }
   }
+  var gbuf=new Uint8ClampedArray(160*120);
   function motionPoint(){
     if(!vid.videoWidth) return null;
     mx.drawImage(vid,0,0,160,120);
-    var d=mx.getImageData(0,0,160,120).data, cur=new Uint8ClampedArray(160*120), i,p;
+    var d=mx.getImageData(0,0,160,120).data, cur=gbuf, i,p;
     for(i=0,p=0;i<d.length;i+=4,p++) cur[p]=(d[i]*77+d[i+1]*150+d[i+2]*29)>>8;
     var out=null;
     if(prev){ var sx=0,sy=0,n=0;
@@ -764,15 +766,20 @@ var Engine=(function(){
           if(df>20){ sx+=x; sy+=y; n++; } } }
       if(n>10) out={x:sx/n/160, y:sy/n/120, score:Math.min(1,n/200)};
     }
-    prev=cur; return out;
+    if(!prev) prev=new Uint8ClampedArray(160*120);
+    prev.set(cur); return out;
   }
   function frame(now, meta){
     if(!running) return;
     /* one clock for everything: page time in seconds, same base the games use */
     var tt = (now!=null? now : performance.now())/1000;
     frames++; if(now-fpsT>500){ fps=frames*1000/(now-fpsT); frames=0; fpsT=now; }
+    if(skip>0){ skip--; next(); return; }
     if(det && vid.videoWidth){
+      var tInf=performance.now();
       det.estimatePoses(vid,{maxPoses:1,flipHorizontal:false}).then(function(poses){
+        infMs = infMs? infMs*0.7+(performance.now()-tInf)*0.3 : (performance.now()-tInf);
+        skip = infMs>45? 2 : (infMs>28? 1 : 0);
         var kp=null;
         if(poses&&poses[0]&&poses[0].keypoints){
           kp={}; var ks=poses[0].keypoints;
@@ -787,7 +794,7 @@ var Engine=(function(){
     } else {
       var m=motionPoint();
       if(cb) cb({t:tt, point:m, mode:"motion", fps:fps});
-      next();
+      skip=1; next();
     }
   }
   function next(){
@@ -810,14 +817,18 @@ var bigNum=document.getElementById("bigNum"), bigSub=document.getElementById("bi
 var goBtn=document.getElementById("goBtn"), altBtn=document.getElementById("altBtn");
 var whoChip=document.getElementById("whoChip"), stateChip=document.getElementById("stateChip"), trackChip=document.getElementById("trackChip");
 var hA=document.getElementById("hA"), hB=document.getElementById("hB"), hF=document.getElementById("hF"), rotEl=document.getElementById("rot");
-var Game=null, curAthlete=null, dpr=1, W=0,H=0;
+var Game=null, curAthlete=null, dpr=1, W=0,H=0, uiT=0, chipT=0;
 var lineA=0.12, lineB=0.88, feetY=0.80, drawFn=null;
 
 function setBtns(main, alt){
   goBtn.textContent=main||""; goBtn.classList.toggle("hide",!main);
   altBtn.textContent=alt||""; altBtn.classList.toggle("hide",!alt);
 }
-function placeHandles(){
+var handleDirty=true;
+function markHandles(){ handleDirty=true; }
+function placeHandles(force){
+  if(!force && !handleDirty) return;
+  handleDirty=false;
   var r=cv.getBoundingClientRect();
   hA.style.left=(r.left+lineA*r.width)+"px"; hB.style.left=(r.left+lineB*r.width)+"px";
   hF.style.top=(r.top+feetY*r.height)+"px";
@@ -826,14 +837,14 @@ function dragV(el,set){
   var on=false;
   el.addEventListener("pointerdown",function(ev){ on=true; el.setPointerCapture(ev.pointerId); });
   el.addEventListener("pointermove",function(ev){ if(!on) return; var r=cv.getBoundingClientRect();
-    set(Math.max(0.03,Math.min(0.97,(ev.clientX-r.left)/r.width))); placeHandles(); ev.preventDefault(); });
+    set(Math.max(0.03,Math.min(0.97,(ev.clientX-r.left)/r.width))); placeHandles(true); ev.preventDefault(); });
   el.addEventListener("pointerup",function(){on=false;}); el.addEventListener("pointercancel",function(){on=false;});
 }
 function dragH(el,set){
   var on=false;
   el.addEventListener("pointerdown",function(ev){ on=true; el.setPointerCapture(ev.pointerId); });
   el.addEventListener("pointermove",function(ev){ if(!on) return; var r=cv.getBoundingClientRect();
-    set(Math.max(0.2,Math.min(0.97,(ev.clientY-r.top)/r.height))); placeHandles(); ev.preventDefault(); });
+    set(Math.max(0.2,Math.min(0.97,(ev.clientY-r.top)/r.height))); placeHandles(true); ev.preventDefault(); });
   el.addEventListener("pointerup",function(){on=false;}); el.addEventListener("pointercancel",function(){on=false;});
 }
 dragV(hA,function(v){lineA=v;}); dragV(hB,function(v){lineB=v;}); dragH(hF,function(v){feetY=v;});
@@ -870,6 +881,7 @@ function startGame(ty){
   whoChip.textContent=curAthlete.name+" · "+curAthlete.age;
   hA.classList.toggle("hide", !Game.useAB); hB.classList.toggle("hide", !Game.useAB);
   hF.classList.toggle("hide", !Game.useFeet);
+  vid.classList.toggle("mirror", Game.mirror===true);
   Game.init();
   Engine.start(Game.facing||"environment", onSample).catch(function(){ bigSub.textContent=t("cam_msg"); });
   requestAnimationFrame(loop);
@@ -884,8 +896,12 @@ altBtn.onclick=function(){ if(Game&&Game.alt) Game.alt(); };
 
 function onSample(f){
   if(!Game) return;
-  trackChip.textContent=(f.mode==="pose"? t("pose"):t("motion"))+" · "+Math.round(f.fps)+" "+t("fps");
-  trackChip.className="chip "+(f.mode==="pose"&&f.kp? "ok":(f.kp===null&&f.mode==="pose"? "warn":""));
+  var nowMs=performance.now();
+  if(nowMs-chipT>250){
+    chipT=nowMs;
+    trackChip.textContent=(f.mode==="pose"? t("pose"):t("motion"))+" · "+Math.round(f.fps)+" "+t("fps");
+    trackChip.className="chip "+(f.mode==="pose"&&f.kp? "ok":(f.kp===null&&f.mode==="pose"? "warn":""));
+  }
   if(Game.sample) Game.sample(f);
 }
 function loop(){
@@ -893,10 +909,11 @@ function loop(){
   requestAnimationFrame(loop);
   dpr=Math.min(window.devicePixelRatio||1,2);
   if(cv.width!==(cv.clientWidth*dpr|0)||cv.height!==(cv.clientHeight*dpr|0)){
-    cv.width=cv.clientWidth*dpr|0; cv.height=cv.clientHeight*dpr|0; }
+    cv.width=cv.clientWidth*dpr|0; cv.height=cv.clientHeight*dpr|0; handleDirty=true; }
   W=cv.width; H=cv.height;
   ctx.setTransform(1,0,0,1,0,0); ctx.clearRect(0,0,W,H);
-  placeHandles(); needOrientation(Game.orient);
+  var nowMs=performance.now();
+  if(nowMs-uiT>200){ uiT=nowMs; placeHandles(); needOrientation(Game.orient); }
   if(Game&&Game.draw) Game.draw();
 }
 function saveSession(obj){
@@ -925,10 +942,18 @@ var ReactGame=(function(){
   var mcv=document.createElement("canvas"), mx=mcv.getContext("2d",{willReadFrequently:true});
   mcv.width=160; mcv.height=120;
   function rct(i){ var L=LAYOUT[i]; return {x:L[0]*W,y:L[1]*H,w:L[2]*W,h:L[3]*H,cx:(L[0]+L[2]/2)*W,cy:(L[1]+L[3]/2)*H}; }
+  var board=null, boardW=0, boardH=0;
+  function buildBoard(){
+    if(!W||!H||!IMG.web.width) return;
+    board=document.createElement("canvas"); board.width=W; board.height=H;
+    var b=board.getContext("2d"); b.globalAlpha=0.92;
+    for(var i=0;i<7;i++){ var r=rct(i); b.drawImage(IMG.web,r.x,r.y,r.w,r.h); }
+    boardW=W; boardH=H;
+  }
   function inBox(i,x,y){ var L=LAYOUT[i]; return x>=L[0]&&x<=L[0]+L[2]&&y>=L[1]&&y<=L[1]+L[3]; }
   function setSt(s){ st=s; t0=performance.now()/1000; }
   return {
-    facing:"user", orient:"portrait", useAB:false, useFeet:false,
+    facing:"user", orient:"portrait", useAB:false, useFeet:false, mirror:true,
     init:function(){ trials=[]; idx=0; cur=-1; last=-1; human=0; spid=0; hands=[];
       bigNum.textContent=""; bigSub.textContent=t("r_hint"); stateChip.textContent=t("g_react");
       setBtns(t("start"),null); setSt("idle"); },
@@ -992,13 +1017,15 @@ var ReactGame=(function(){
       altBtn.onclick=function(){ if(Game&&Game.alt) Game.alt(); }; },
     draw:function(){
       var now=performance.now()/1000, e=now-t0, base=Math.min(W,H);
-      drawVideo(true);
+      drawVideo();
+      if(boardW!==W||boardH!==H) buildBoard();
+      if(board) ctx.drawImage(board,0,0);
       for(var i=0;i<7;i++){
-        var r=rct(i); ctx.save();
         var fl=flash[i]&&now<flash[i]? flashC[i]:null;
-        if(fl){ ctx.shadowColor=fl; ctx.shadowBlur=36*dpr; }
-        else if(i===cur&&st==="fly"){ ctx.shadowColor="#FFD35C"; ctx.shadowBlur=26*dpr; }
-        ctx.globalAlpha=fl?1:0.92; ctx.drawImage(IMG.web,r.x,r.y,r.w,r.h); ctx.restore();
+        if(!fl && !(i===cur&&st==="fly")) continue;
+        var r=rct(i); ctx.save();
+        ctx.shadowColor=fl||"#FFD35C"; ctx.shadowBlur=(fl?36:26)*dpr;
+        ctx.globalAlpha=fl?1:0.95; ctx.drawImage(IMG.web,r.x,r.y,r.w,r.h); ctx.restore();
       }
       if(st==="count"){
         if(e<3){ lab(t("stand_center"),W/2,H*0.42,base*0.05,"#fff"); lab(String(3-Math.floor(e)),W/2,H*0.52,base*0.14,"#FFD35C"); }
@@ -1007,7 +1034,7 @@ var ReactGame=(function(){
       if(st==="fly"&&cur>=0){
         var rr=rct(cur), k=Math.min(1,(now-flyT0)/0.15);
         fitImg(IMG.fly, rr.cx+Math.sin(now*9)*rr.w*0.06, rr.cy+Math.cos(now*7)*rr.h*0.05, rr.w*0.5, rr.h*0.5, Math.sin(now*12)*0.2, k);
-        lab(String(Math.max(1,Math.ceil(limit-(now-flyT0)))), rr.cx, rr.y-base*0.03, base*0.06,"#FFD35C");
+        lab(String(Math.max(1,Math.ceil(limit-(now-flyT0)))), rr.cx, rr.y+rr.h*0.16, base*0.06,"#FFD35C");
       }
       if(st==="caught"&&cur>=0){
         var rc=rct(cur), kc=Math.min(1,e/0.4);
@@ -1105,7 +1132,7 @@ var ShuttleGame=(function(){
       altBtn.onclick=function(){ if(Game&&Game.alt) Game.alt(); }; },
     draw:function(){
       var now=performance.now()/1000, e=now-t0;
-      drawVideo(false);
+      drawVideo();
       /* lane strip on top */
       var laneH=H*0.26, m1=W*0.08, m2=W*0.92;
       ctx.save(); ctx.fillStyle="rgba(12,8,20,.55)"; ctx.fillRect(0,0,W,laneH);
@@ -1244,7 +1271,7 @@ var JumpGame=(function(){
       altBtn.onclick=function(){ if(Game&&Game.alt) Game.alt(); }; },
     draw:function(){
       var now=performance.now()/1000, e=now-t0;
-      drawVideo(false);
+      drawVideo();
       if(st==="set"){
         if(e<1.6){ bigNum.textContent="…"; bigSub.textContent=t("get_ready"); }
         else { beep(1000,0.35,0.26); bigNum.textContent="↑"; bigSub.textContent=t("j_jump"); setSt("armed"); }
@@ -1286,15 +1313,11 @@ var JumpGame=(function(){
   function interp(t1,y1,t2,y2,thr){ if(y2===y1) return t2; return t1+(thr-y1)*(t2-t1)/(y2-y1); }
 })();
 
-function drawVideo(mirror){
-  if(!vid.videoWidth){ ctx.fillStyle="#0B0813"; ctx.fillRect(0,0,W,H); return; }
-  var s=Math.max(W/vid.videoWidth,H/vid.videoHeight), dw=vid.videoWidth*s, dh=vid.videoHeight*s;
-  ctx.save();
-  if(mirror){ ctx.translate(W,0); ctx.scale(-1,1); }
-  ctx.drawImage(vid,(W-dw)/2,(H-dh)/2,dw,dh);
-  ctx.restore();
-}
-window.addEventListener("resize",placeHandles);
+/* the camera is shown by the <video> element itself (CSS-mirrored when needed),
+   so no video frame is copied through the canvas each frame */
+function drawVideo(){ }
+window.addEventListener("resize",markHandles);
+window.addEventListener("orientationchange",markHandles);
 applyLang(); go("home");
 })();
 </script>
